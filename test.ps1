@@ -11,31 +11,32 @@ Connect-VIServer -Server $vcenterServer -User $vcUsername -Password $vcPassword
 $datacenterName = "YourDatacenter"
 $clusterName = "YourCluster"
 $datastoreName = "YourDatastore"
-$vmTemplate = "YourVMTemplate"
 $networkNameTestServer = "VLAN-TestServer-PortGroup"  # VLAN where the test server will be
 $vmNameTestServer = "TestServer"
 $vlans = @("VLAN1-PortGroup", "VLAN2-PortGroup", "VLAN3-PortGroup", "VLAN4-PortGroup", "VLAN5-PortGroup", "VLAN6-PortGroup", "VLAN7-PortGroup", "VLAN8-PortGroup", "VLAN9-PortGroup", "VLAN10-PortGroup", "VLAN11-PortGroup", "VLAN12-PortGroup", "VLAN13-PortGroup", "VLAN14-PortGroup", "VLAN15-PortGroup", "VLAN16-PortGroup", "VLAN17-PortGroup", "VLAN18-PortGroup", "VLAN19-PortGroup", "VLAN20-PortGroup")
 $vmCpu = 2
-$vmMemoryGB = 4
+$vmMemoryMB = 4096
 $vmDiskGB = 40
+$vmGuestOS = "windows9Server64Guest"  # Replace with appropriate guest OS ID
 
-# Function to create VM
+# Function to create a VM from scratch
 function Create-VM {
     param (
         [string]$vmName,
         [string]$networkName
     )
 
+    # Create a new VM
     New-VM -Name $vmName `
-           -Template $vmTemplate `
-           -Datastore $datastoreName `
-           -NetworkName $networkName `
-           -Cluster $clusterName `
-           -DiskGB $vmDiskGB `
-           -MemoryGB $vmMemoryGB `
-           -NumCpu $vmCpu `
            -ResourcePool (Get-Cluster $clusterName | Get-ResourcePool | Where-Object { $_.Name -eq 'Resources' }) `
-           -Datacenter $datacenterName -RunAsync
+           -Datastore $datastoreName `
+           -DiskGB $vmDiskGB `
+           -MemoryMB $vmMemoryMB `
+           -NumCpu $vmCpu `
+           -NetworkName $networkName `
+           -GuestId $vmGuestOS `
+           -Datacenter $datacenterName `
+           -CD  -Confirm:$false -RunAsync
 }
 
 # Create the test server in the specified VLAN

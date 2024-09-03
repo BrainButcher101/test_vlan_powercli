@@ -11,8 +11,6 @@ Connect-VIServer -Server $vcenterServer -User $vcUsername -Password $vcPassword
 $datacenterName = "YourDatacenter"
 $clusterName = "YourCluster"
 $datastoreName = "YourDatastore"
-$networkNameTestServer = "VLAN-TestServer-PortGroup"  # VLAN where the test server will be
-$vmNameTestServer = "TestServer"
 $vlans = @("VLAN1-PortGroup", "VLAN2-PortGroup", "VLAN3-PortGroup", "VLAN4-PortGroup", "VLAN5-PortGroup", "VLAN6-PortGroup", "VLAN7-PortGroup", "VLAN8-PortGroup", "VLAN9-PortGroup", "VLAN10-PortGroup", "VLAN11-PortGroup", "VLAN12-PortGroup", "VLAN13-PortGroup", "VLAN14-PortGroup", "VLAN15-PortGroup", "VLAN16-PortGroup", "VLAN17-PortGroup", "VLAN18-PortGroup", "VLAN19-PortGroup", "VLAN20-PortGroup")
 $staticIPs = @("192.168.1.10", "192.168.2.10", "192.168.3.10", "192.168.4.10", "192.168.5.10", "192.168.6.10", "192.168.7.10", "192.168.8.10", "192.168.9.10", "192.168.10.10", "192.168.11.10", "192.168.12.10", "192.168.13.10", "192.168.14.10", "192.168.15.10", "192.168.16.10", "192.168.17.10", "192.168.18.10", "192.168.19.10", "192.168.20.10")
 $vmCpu = 2
@@ -51,27 +49,30 @@ function Create-VM {
     Set-VMGuestNetworkInterface -IPPolicy static -Gateway $gateway -Netmask $subnetMask -IPAddress $staticIP -NetworkAdapter $adapter -VM $vm -Dns $dnsServer -Confirm:$false
 }
 
-# Create the test server in the specified VLAN and assign a static IP
-$testServerIp = "192.168.1.100"  # Specify the IP for the test server
-Write-Host "Creating Test Server in VLAN Test Server..."
-$testServer = Create-VM -vmName $vmNameTestServer -networkName $networkNameTestServer -staticIP $testServerIp
-
-# Create VMs in each of the other VLANs and assign static IPs
+# Create VMs in each of the VLANs and assign static IPs
+$vmDetails = @()  # To store VM names and IPs
 for ($i = 0; $i -lt $vlans.Count; $i++) {
     $vlan = $vlans[$i]
     $staticIP = $staticIPs[$i]
-    $vmName = "TestVM-$vlan"
+    $vmName = "TestVM-$i"
     Write-Host "Creating VM in $vlan with IP $staticIP..."
     Create-VM -vmName $vmName -networkName $vlan -staticIP $staticIP
+
+    # Store VM name and IP for later ping tests
+    $vmDetails += [PSCustomObject]@{ VMName = $vmName; IPAddress = $staticIP }
 }
 
-# Perform ping tests from the Test Server to each VM
-foreach ($ip in $staticIPs) {
-    Write-Host "Pinging from Test Server ($testServerIp) to VM ($ip)..."
-    if (Test-Connection -Source $testServerIp -ComputerName $ip -Count 4 -Quiet) {
-        Write-Host "Ping to VM ($ip) succeeded."
-    } else {
-        Write-Host "Ping to VM ($ip) failed."
+# Perform ping tests between all VMs
+foreach ($sourceVM in $vmDetails) {
+    foreach ($targetVM in $vmDetails) {
+        if ($sourceVM.IPAddress -ne $targetVM.IPAddress) {  # Avoid pinging itself
+            Write-Host "Pinging from $($sourceVM.VMName) ($($sourceVM.IPAddress)) to $($targetVM.VMName) ($($targetVM.IPAddress))..."
+            if (Test-Connection -Source $sourceVM.IPAddress -ComputerName $targetVM.IPAddress -Count 4 -Quiet) {
+                Write-Host "Ping from $($sourceVM.VMName) to $($targetVM.VMName) succeeded."
+            } else {
+                Write-Host "Ping from $($sourceVM.VMName) to $($targetVM.VMName) failed."
+            }
+        }
     }
 }
 

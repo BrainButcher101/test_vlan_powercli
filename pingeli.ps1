@@ -6,10 +6,13 @@ $ipList = @(
     # Add more entries as needed...
 )
 
-# Initialize an empty ArrayList for storing the ping results
-$pingResults = New-Object System.Collections.ArrayList
+# Define the output file path
+$outputFilePath = "C:\Users\Administrator\Documents\PingResult.txt"
 
-# Function to ping a host using the normal ping command
+# Clear or create the output file
+Set-Content -Path $outputFilePath -Value ""
+
+# Function to ping a host and save the output to a text file
 function Ping-Host {
     param (
         [string]$DestinationIP,
@@ -17,55 +20,19 @@ function Ping-Host {
         [string]$Cluster
     )
 
-    # Run the ping command and capture the output as a string array
+    # Run the ping command and capture the output
     $pingOutput = ping $DestinationIP -n 4 | Out-String
 
-    # Split the output into lines for easier processing
-    $pingLines = $pingOutput -split "`n"
-
-    # Parse the ping command output
-    foreach ($line in $pingLines) {
-        if ($line -match "Reply from (\d+\.\d+\.\d+\.\d+): bytes=\d+ time=(\d+)ms TTL=\d+") {
-            $responseTime = $matches[2]
-            $pingResults.Add([PSCustomObject]@{
-                SourceIP = $env:COMPUTERNAME
-                DestinationIP = $DestinationIP
-                PingResult = "Success"
-                ResponseTime = $responseTime
-                VMName = $VMName
-                Cluster = $Cluster
-            }) | Out-Null
-        } elseif ($line -match "Request timed out.") {
-            $pingResults.Add([PSCustomObject]@{
-                SourceIP = $env:COMPUTERNAME
-                DestinationIP = $DestinationIP
-                PingResult = "Timeout"
-                ResponseTime = "N/A"
-                VMName = $VMName
-                Cluster = $Cluster
-            }) | Out-Null
-        } elseif ($line -match "Ping request could not find host") {
-            $pingResults.Add([PSCustomObject]@{
-                SourceIP = $env:COMPUTERNAME
-                DestinationIP = $DestinationIP
-                PingResult = "Failed"
-                ResponseTime = "N/A"
-                VMName = $VMName
-                Cluster = $Cluster
-            }) | Out-Null
-        }
-    }
+    # Append the output to the text file with VM and cluster info
+    Add-Content -Path $outputFilePath -Value "Pinging $DestinationIP (VM: $VMName, Cluster: $Cluster)"
+    Add-Content -Path $outputFilePath -Value $pingOutput
+    Add-Content -Path $outputFilePath -Value "`n"  # Add a new line for separation
 }
 
 # Loop through each entry in the IP list and perform the ping
 foreach ($entry in $ipList) {
     Ping-Host -DestinationIP $entry.IP -VMName $entry.VMName -Cluster $entry.Cluster
-    # Sleep for 2 seconds to avoid resource overload
-    Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 2  # Sleep to avoid resource overload
 }
 
-# Convert the ArrayList to a standard array and export the ping results to a CSV file with headers
-$path = "C:\Users\Administrator\Documents\PingResults.csv"
-$pingResults.ToArray() | Export-Csv -Path $path -NoTypeInformation
-
-Write-Host "Ping results have been saved to $path."
+Write-Host "Ping results have been saved to $outputFilePath."

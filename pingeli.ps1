@@ -3,10 +3,11 @@ $ipList = @(
     @{ VMName = "VLAN-Test1"; Cluster = "WIN-PROD"; Vlan = "pg_vm.2400_PRO_WIN.ds_WIN-PROD"; IP = "10.76.32.250"; SubnetMask = "255.255.255.0"; Gateway = "10.76.32.1"; Prefix = "24" },
     @{ VMName = "VLAN-Test2"; Cluster = "LNX-PROD"; Vlan = "pg_vm.2405_PRO_LNX.ds_LNX-PROD"; IP = "10.76.34.125"; SubnetMask = "255.255.255.128"; Gateway = "10.76.34.1"; Prefix = "28" },
     @{ VMName = "VLAN-Test3"; Cluster = "SAP"; Vlan = "pg_vm.2410_PRO_SAP_APP.ds_SAP"; IP = "10.76.35.29"; SubnetMask = "255.255.255.224"; Gateway = "10.76.35.1"; Prefix = "28" }
+    # Add more entries as needed...
 )
 
-# Initialize an empty array for storing the ping results
-$pingResults = @()
+# Initialize an empty ArrayList for storing the ping results
+$pingResults = New-Object System.Collections.ArrayList
 
 # Function to ping a host using the normal ping command
 function Ping-Host {
@@ -26,32 +27,32 @@ function Ping-Host {
     foreach ($line in $pingLines) {
         if ($line -match "Reply from (\d+\.\d+\.\d+\.\d+): bytes=\d+ time=(\d+)ms TTL=\d+") {
             $responseTime = $matches[2]
-            $pingResults += [PSCustomObject]@{
+            $pingResults.Add([PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
                 DestinationIP = $DestinationIP
                 PingResult = "Success"
                 ResponseTime = $responseTime
                 VMName = $VMName
                 Cluster = $Cluster
-            }
+            }) | Out-Null
         } elseif ($line -match "Request timed out.") {
-            $pingResults += [PSCustomObject]@{
+            $pingResults.Add([PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
                 DestinationIP = $DestinationIP
                 PingResult = "Timeout"
                 ResponseTime = "N/A"
                 VMName = $VMName
                 Cluster = $Cluster
-            }
+            }) | Out-Null
         } elseif ($line -match "Ping request could not find host") {
-            $pingResults += [PSCustomObject]@{
+            $pingResults.Add([PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
                 DestinationIP = $DestinationIP
                 PingResult = "Failed"
                 ResponseTime = "N/A"
                 VMName = $VMName
                 Cluster = $Cluster
-            }
+            }) | Out-Null
         }
     }
 }
@@ -63,8 +64,8 @@ foreach ($entry in $ipList) {
     Start-Sleep -Seconds 2
 }
 
-# Export the ping results to a CSV file with headers in Administrator/Documents
+# Convert the ArrayList to a standard array and export the ping results to a CSV file with headers
 $path = "C:\Users\Administrator\Documents\PingResults.csv"
-$pingResults | Export-Csv -Path $path -NoTypeInformation
+$pingResults.ToArray() | Export-Csv -Path $path -NoTypeInformation
 
 Write-Host "Ping results have been saved to $path."

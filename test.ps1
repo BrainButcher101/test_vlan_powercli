@@ -7,18 +7,18 @@ $vcUsername = "administrator@vsphere.local"
 $vcPassword = "YourPassword"
 Connect-VIServer -Server $vcenterServer -User $vcUsername -Password $vcPassword
 
-# Parameters
-$datacenterName = "YourDatacenter"
-$clusterName = "YourCluster"
-$datastoreName = "YourDatastore"
-$sourceVMName = "schlampe"  # The existing VM to clone
-$vlans = @("VLAN1-PortGroup", "VLAN2-PortGroup", "VLAN3-PortGroup", "VLAN4-PortGroup", "VLAN5-PortGroup", "VLAN6-PortGroup", "VLAN7-PortGroup", "VLAN8-PortGroup", "VLAN9-PortGroup", "VLAN10-PortGroup", "VLAN11-PortGroup", "VLAN12-PortGroup", "VLAN13-PortGroup", "VLAN14-PortGroup", "VLAN15-PortGroup", "VLAN16-PortGroup", "VLAN17-PortGroup", "VLAN18-PortGroup", "VLAN19-PortGroup", "VLAN20-PortGroup")
-$staticIPs = @("192.168.1.10", "192.168.2.10", "192.168.3.10", "192.168.4.10", "192.168.5.10", "192.168.6.10", "192.168.7.10", "192.168.8.10", "192.168.9.10", "192.168.10.10", "192.168.11.10", "192.168.12.10", "192.168.13.10", "192.168.14.10", "192.168.15.10", "192.168.16.10", "192.168.17.10", "192.168.18.10", "192.168.19.10", "192.168.20.10")
+# Parameters: Cluster, VLAN, IP, Subnet Mask, and Gateway combinations
+$vmConfigurations = @(
+    @{ VMName = "TestVM-1"; Cluster = "Cluster1"; Vlan = "VLAN1-PortGroup"; IP = "192.168.1.10"; SubnetMask = "255.255.255.0"; Gateway = "192.168.1.1" },
+    @{ VMName = "TestVM-2"; Cluster = "Cluster2"; Vlan = "VLAN2-PortGroup"; IP = "192.168.2.10"; SubnetMask = "255.255.255.0"; Gateway = "192.168.2.1" },
+    @{ VMName = "TestVM-3"; Cluster = "Cluster3"; Vlan = "VLAN3-PortGroup"; IP = "192.168.3.10"; SubnetMask = "255.255.255.0"; Gateway = "192.168.3.1" },
+    @{ VMName = "TestVM-4"; Cluster = "Cluster4"; Vlan = "VLAN4-PortGroup"; IP = "192.168.4.10"; SubnetMask = "255.255.255.128"; Gateway = "192.168.4.1" }
+)
+
 $vmCpu = 2
 $vmMemoryMB = 4096
-$subnetMask = "255.255.255.0"
-$gateway = "192.168.1.1"  # Replace with the appropriate gateway
 $dnsServer = "8.8.8.8"  # Replace with your DNS server
+$sourceVMName = "schlampe"  # The existing VM to clone
 
 # CSV output file
 $outputCsv = "PingResults.csv"
@@ -26,18 +26,21 @@ $outputCsv = "PingResults.csv"
 # Initialize CSV file
 "SourceVM,SourceIP,DestinationVM,DestinationIP,PingResult" | Out-File -FilePath $outputCsv
 
-# Function to clone a VM and reconfigure it
+# Function to clone a VM, configure its network, and place it in a specific cluster and VLAN
 function Clone-VM {
     param (
         [string]$vmName,
+        [string]$clusterName,
         [string]$networkName,
-        [string]$staticIP
+        [string]$staticIP,
+        [string]$subnetMask,
+        [string]$gateway
     )
 
     # Clone the existing VM
     $clonedVM = New-VM -Name $vmName `
                        -VM $sourceVMName `
-                       -Datastore $datastoreName `
+                       -Datastore (Get-Cluster $clusterName | Get-Datastore | Select-Object -First 1) `
                        -ResourcePool (Get-Cluster $clusterName | Get-ResourcePool | Where-Object { $_.Name -eq 'Resources' }) `
                        -NetworkName $networkName `
                        -NumCpu $vmCpu `
@@ -47,22 +50,21 @@ function Clone-VM {
     # Wait for VM to be cloned
     Start-Sleep -Seconds 120
 
-    # Configure network settings with static IP
+    # Configure network settings with static IP, gateway, and subnet mask
     $adapter = Get-NetworkAdapter -VM $clonedVM
     Set-VMGuestNetworkInterface -IPPolicy static -Gateway $gateway -Netmask $subnetMask -IPAddress $staticIP -NetworkAdapter $adapter -VM $clonedVM -Dns $dnsServer -Confirm:$false
 }
 
-# Clone VMs in each of the VLANs and assign static IPs
+# Clone VMs and assign static IPs, subnet masks, and gateways based on the configurations
 $vmDetails = @()  # To store VM names and IPs
-for ($i = 0; $i -lt $vlans.Count; $i++) {
-    $vlan = $vlans[$i]
-    $staticIP = $staticIPs[$i]
-    $vmName = "ClonedVM-$i"
-    Write-Host "Cloning VM for $vlan with IP $staticIP..."
-    Clone-VM -vmName $vmName -networkName $vlan -staticIP $staticIP
+for ($i = 0; $i -lt $vmConfigurations.Count; $i++) {
+    $config = $vmConfigurations[$i]
+    $vmName = $config.VMName  # Use the custom VM name from the configuration
+    Write-Host "Cloning VM $vmName for Cluster $($config.Cluster), VLAN $($config.Vlan), IP $($config.IP), Subnet Mask $($config.SubnetMask), and Gateway $($config.Gateway)..."
+    Clone-VM -vmName $vmName -clusterName $config.Cluster -networkName $config.Vlan -staticIP $config.IP -subnetMask $config.SubnetMask -gateway $config.Gateway
 
     # Store VM name and IP for later ping tests
-    $vmDetails += [PSCustomObject]@{ VMName = $vmName; IPAddress = $staticIP }
+    $vmDetails += [PSCustomObject]@{ VMName = $vmName; IPAddress = $config.IP }
 }
 
 # Perform ping tests between all VMs and save results to CSV

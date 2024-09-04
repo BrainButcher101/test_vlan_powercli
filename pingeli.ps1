@@ -2,44 +2,63 @@
 $ipList = @(
     @{ VMName = "VLAN-Test1"; Cluster = "WIN-PROD"; Vlan = "pg_vm.2400_PRO_WIN.ds_WIN-PROD"; IP = "10.76.32.250"; SubnetMask = "255.255.255.0"; Gateway = "10.76.32.1"; Prefix = "24" },
     @{ VMName = "VLAN-Test2"; Cluster = "LNX-PROD"; Vlan = "pg_vm.2405_PRO_LNX.ds_LNX-PROD"; IP = "10.76.34.125"; SubnetMask = "255.255.255.128"; Gateway = "10.76.34.1"; Prefix = "28" },
-    @{ VMName = "VLAN-Test3"; Cluster = "SAP"; Vlan = "pg_vm.2410_PRO_SAP_APP.ds_SAP"; IP = "10.76.35.29"; SubnetMask = "255.255.255.224"; Gateway = "10.76.35.1"; Prefix = "28" },
-    @{ VMName = "VLAN-Test4"; Cluster = "SAP"; Vlan = "pg_vm.2415_PRO_SAP_ARC_APP.ds_SAP"; IP = "10.76.35.45"; SubnetMask = "255.255.255.240"; Gateway = "10.76.35.33"; Prefix = "24" },
-    @{ VMName = "VLAN-Test5"; Cluster = "MSQ-PROD"; Vlan = "pg_vm.2420_PRO_DB_MSQ.ds_MSQ-PROD"; IP = "10.76.36.61"; SubnetMask = "255.255.255.192"; Gateway = "10.76.36.1"; Prefix = "24" },
-    @{ VMName = "VLAN-Test6"; Cluster = "SAP"; Vlan = "pg_vm.2430_PRO_SAP_HANA.ds_SAP"; IP = "10.76.36.220"; SubnetMask = "255.255.255.224"; Gateway = "10.76.36.193"; Prefix = "24" },
-    @{ VMName = "VLAN-Test7"; Cluster = "WIN-NPROD"; Vlan = "pg_vm.2440_TST_WIN.ds_WIN-NPROD"; IP = "10.76.40.250"; SubnetMask = "255.255.255.0"; Gateway = "10.76.40.1"; Prefix = "24" },
-    @{ VMName = "VLAN-Test8"; Cluster = "LNX-NPROD"; Vlan = "pg_vm.2445_TST_LNX.ds_LNX-NPROD"; IP = "10.76.42.125"; SubnetMask = "255.255.255.128"; Gateway = "10.76.42.1"; Prefix = "24" },
-    @{ VMName = "VLAN-Test9"; Cluster = "SAP"; Vlan = "pg_vm.2650_TST_SAP_APP.ds_SAP"; IP = "10.76.43.29"; SubnetMask = "255.255.255.224"; Gateway = "10.76.43.1"; Prefix = "24" },
-    @{ VMName = "VLAN-Test10"; Cluster = "MSQ-PROD"; Vlan = "pg_vm.2455_TST_DB_MSQ.ds_MSQ-NPROD"; IP = "10.76.44.61"; SubnetMask = "255.255.255.192"; Gateway = "10.76.44.1"; Prefix = "24" },
-    @{ VMName = "VLAN-Test11"; Cluster = "SAP"; Vlan = "pg_vm.2465_TST_SAP_HANA.ds_SAP"; IP = "10.76.44.220"; SubnetMask = "255.255.255.224"; Gateway = "10.76.44.193"; Prefix = "24" },
-    @{ VMName = "VLAN-Test12"; Cluster = "WIN-NPROD"; Vlan = "pg_vm.2470_DEV_WIN.ds_WIN-NPROD"; IP = "10.76.47.60"; SubnetMask = "255.255.255.192"; Gateway = "10.76.47.1"; Prefix = "24" },
-    @{ VMName = "VLAN-Test13"; Cluster = "LNX-NPROD"; Vlan = "pg_vm.2475_DEV_LNX.ds_LNX-NPROD"; IP = "10.76.48.60"; SubnetMask = "255.255.255.192"; Gateway = "10.76.48.1"; Prefix = "24" },
-    @{ VMName = "VLAN-Test14"; Cluster = "SAP"; Vlan = "pg_vm.2480_DEV_SAP_APP.ds_SAP"; IP = "10.76.48.220"; SubnetMask = "255.255.255.224"; Gateway = "10.76.48.193"; Prefix = "24" },
-    @{ VMName = "VLAN-Test15"; Cluster = "MSQ-NPROD"; Vlan = "pg_vm.2485_DEV_DB_MSQ.ds_MSQ-NPROD"; IP = "10.76.49.60"; SubnetMask = "255.255.255.192"; Gateway = "10.76.48.1"; Prefix = "24" },
-    @{ VMName = "VLAN-Test16"; Cluster = "SAP"; Vlan = "pg_vm.2495_DEV_SAP_HANA.ds_SAP"; IP = "10.76.49.220"; SubnetMask = "255.255.255.224"; Gateway = "10.76.48.193"; Prefix = "24" },
-    @{ VMName = "VLAN-Test17"; Cluster = "LNX-PROD"; Vlan = "pg_vm.2535_DMZ_OB_APP_LNX.ds_LNX-PROD"; IP = "10.76.56.93"; SubnetMask = "255.255.255.224"; Gateway = "10.76.56.65"; Prefix = "24" },
-    @{ VMName = "VLAN-Test18"; Cluster = "WIN-PROD"; Vlan = "pg_vm.2540_DMZ_OB_INF_WIN.ds_WIN-PROD"; IP = "10.76.56.157"; SubnetMask = "255.255.255.224"; Gateway = "10.76.56.129"; Prefix = "24" },
-    @{ VMName = "VLAN-Test19"; Cluster = "LNX-PROD"; Vlan = "pg_vm.2545_DMZ_OB_INF_LNX.ds_LNX-PROD"; IP = "10.76.56.220"; SubnetMask = "255.255.255.224"; Gateway = "10.76.56.193"; Prefix = "24" }
+    @{ VMName = "VLAN-Test3"; Cluster = "SAP"; Vlan = "pg_vm.2410_PRO_SAP_APP.ds_SAP"; IP = "10.76.35.29"; SubnetMask = "255.255.255.224"; Gateway = "10.76.35.1"; Prefix = "28" }
+    # Add more entries as needed...
 )
 
 # Initialize an empty array for storing the ping results
 $pingResults = @()
 
-# Loop through each entry in the IP list
-foreach ($entry in $ipList) {
-    $destinationIP = $entry.IP
-    $pings = Test-Connection -ComputerName $destinationIP -Count 4
+# Function to ping a host using the normal ping command
+function Ping-Host {
+    param (
+        [string]$DestinationIP,
+        [string]$VMName,
+        [string]$Cluster
+    )
 
-    # Collect results for each ping
-    foreach ($ping in $pings) {
-        $pingResults += [PSCustomObject]@{
-            SourceIP = $env:COMPUTERNAME
-            DestinationIP = $destinationIP
-            PingResult = if ($ping.StatusCode -eq 0) { "Success" } else { "Failure" }
-            ResponseTime = $ping.ResponseTime
-            VMName = $entry.VMName
-            Cluster = $entry.Cluster
+    # Run the ping command and capture the output
+    $pingOutput = ping $DestinationIP -n 4
+    
+    # Parse the ping command output
+    $pingOutput | ForEach-Object {
+        if ($_ -match "Reply from (\d+\.\d+\.\d+\.\d+): bytes=\d+ time=(\d+)ms TTL=\d+") {
+            $responseTime = $matches[2]
+            $pingResults += [PSCustomObject]@{
+                SourceIP = $env:COMPUTERNAME
+                DestinationIP = $DestinationIP
+                PingResult = "Success"
+                ResponseTime = $responseTime
+                VMName = $VMName
+                Cluster = $Cluster
+            }
+        } elseif ($_ -match "Request timed out.") {
+            $pingResults += [PSCustomObject]@{
+                SourceIP = $env:COMPUTERNAME
+                DestinationIP = $DestinationIP
+                PingResult = "Timeout"
+                ResponseTime = "N/A"
+                VMName = $VMName
+                Cluster = $Cluster
+            }
+        } elseif ($_ -match "Ping request could not find host") {
+            $pingResults += [PSCustomObject]@{
+                SourceIP = $env:COMPUTERNAME
+                DestinationIP = $DestinationIP
+                PingResult = "Failed"
+                ResponseTime = "N/A"
+                VMName = $VMName
+                Cluster = $Cluster
+            }
         }
     }
+}
+
+# Loop through each entry in the IP list and perform the ping
+foreach ($entry in $ipList) {
+    Ping-Host -DestinationIP $entry.IP -VMName $entry.VMName -Cluster $entry.Cluster
+    # Sleep for 2 seconds to avoid resource overload
+    Start-Sleep -Seconds 2
 }
 
 # Export the ping results to a CSV file in Administrator/Documents

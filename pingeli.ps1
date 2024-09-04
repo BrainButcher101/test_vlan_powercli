@@ -6,8 +6,8 @@ $ipList = @(
     # Add more entries as needed...
 )
 
-# Initialize an empty array for storing the ping results
-$pingResults = @()
+# Initialize an array list for storing the ping results
+$pingResults = New-Object System.Collections.ArrayList
 
 # Function to ping a host using the normal ping command
 function Ping-Host {
@@ -24,32 +24,32 @@ function Ping-Host {
     foreach ($line in $pingOutput) {
         if ($line -match "Reply from (\d+\.\d+\.\d+\.\d+): bytes=\d+ time=(\d+)ms TTL=\d+") {
             $responseTime = $matches[2]
-            $pingResults += [PSCustomObject]@{
+            $pingResults.Add([PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
                 DestinationIP = $DestinationIP
                 PingResult = "Success"
                 ResponseTime = $responseTime
                 VMName = $VMName
                 Cluster = $Cluster
-            }
+            }) | Out-Null
         } elseif ($line -match "Request timed out.") {
-            $pingResults += [PSCustomObject]@{
+            $pingResults.Add([PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
                 DestinationIP = $DestinationIP
                 PingResult = "Timeout"
                 ResponseTime = "N/A"
                 VMName = $VMName
                 Cluster = $Cluster
-            }
+            }) | Out-Null
         } elseif ($line -match "Ping request could not find host") {
-            $pingResults += [PSCustomObject]@{
+            $pingResults.Add([PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
                 DestinationIP = $DestinationIP
                 PingResult = "Failed"
                 ResponseTime = "N/A"
                 VMName = $VMName
                 Cluster = $Cluster
-            }
+            }) | Out-Null
         }
     }
 }
@@ -61,8 +61,9 @@ foreach ($entry in $ipList) {
     Start-Sleep -Seconds 2
 }
 
-# Export the ping results to a CSV file with headers in Administrator/Documents
+# Convert the ArrayList to an array and export the ping results to a CSV file with headers in Administrator/Documents
+$pingResultsArray = $pingResults.ToArray()
 $path = "C:\Users\Administrator\Documents\PingResults.csv"
-$pingResults | Export-Csv -Path $path -NoTypeInformation
+$pingResultsArray | Export-Csv -Path $path -NoTypeInformation
 
 Write-Host "Ping results have been saved to $path."

@@ -17,12 +17,12 @@ function Ping-Host {
         [string]$Cluster
     )
 
-    # Run the ping command and capture the output
+    # Run the ping command and capture the output as a string array
     $pingOutput = ping $DestinationIP -n 4
-    
+
     # Parse the ping command output
-    $pingOutput | ForEach-Object {
-        if ($_ -match "Reply from (\d+\.\d+\.\d+\.\d+): bytes=\d+ time=(\d+)ms TTL=\d+") {
+    foreach ($line in $pingOutput) {
+        if ($line -match "Reply from (\d+\.\d+\.\d+\.\d+): bytes=\d+ time=(\d+)ms TTL=\d+") {
             $responseTime = $matches[2]
             $pingResults += [PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
@@ -32,7 +32,7 @@ function Ping-Host {
                 VMName = $VMName
                 Cluster = $Cluster
             }
-        } elseif ($_ -match "Request timed out.") {
+        } elseif ($line -match "Request timed out.") {
             $pingResults += [PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
                 DestinationIP = $DestinationIP
@@ -41,7 +41,7 @@ function Ping-Host {
                 VMName = $VMName
                 Cluster = $Cluster
             }
-        } elseif ($_ -match "Ping request could not find host") {
+        } elseif ($line -match "Ping request could not find host") {
             $pingResults += [PSCustomObject]@{
                 SourceIP = $env:COMPUTERNAME
                 DestinationIP = $DestinationIP
@@ -61,7 +61,7 @@ foreach ($entry in $ipList) {
     Start-Sleep -Seconds 2
 }
 
-# Export the ping results to a CSV file in Administrator/Documents
+# Export the ping results to a CSV file with headers in Administrator/Documents
 $path = "C:\Users\Administrator\Documents\PingResults.csv"
 $pingResults | Export-Csv -Path $path -NoTypeInformation
 

@@ -3,7 +3,6 @@ $ipList = @(
     @{ VMName = "VLAN-Test1"; Cluster = "WIN-PROD"; Vlan = "pg_vm.2400_PRO_WIN.ds_WIN-PROD"; IP = "10.76.32.250"; SubnetMask = "255.255.255.0"; Gateway = "10.76.32.1"; Prefix = "24" },
     @{ VMName = "VLAN-Test2"; Cluster = "LNX-PROD"; Vlan = "pg_vm.2405_PRO_LNX.ds_LNX-PROD"; IP = "10.76.34.125"; SubnetMask = "255.255.255.128"; Gateway = "10.76.34.1"; Prefix = "28" },
     @{ VMName = "VLAN-Test3"; Cluster = "SAP"; Vlan = "pg_vm.2410_PRO_SAP_APP.ds_SAP"; IP = "10.76.35.29"; SubnetMask = "255.255.255.224"; Gateway = "10.76.35.1"; Prefix = "28" }
-    # Add more entries as needed...
 )
 
 # Initialize an empty array for storing the ping results
@@ -18,10 +17,13 @@ function Ping-Host {
     )
 
     # Run the ping command and capture the output as a string array
-    $pingOutput = ping $DestinationIP -n 4
+    $pingOutput = ping $DestinationIP -n 4 | Out-String
+
+    # Split the output into lines for easier processing
+    $pingLines = $pingOutput -split "`n"
 
     # Parse the ping command output
-    foreach ($line in $pingOutput) {
+    foreach ($line in $pingLines) {
         if ($line -match "Reply from (\d+\.\d+\.\d+\.\d+): bytes=\d+ time=(\d+)ms TTL=\d+") {
             $responseTime = $matches[2]
             $pingResults += [PSCustomObject]@{

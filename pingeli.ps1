@@ -27,18 +27,18 @@ $pingResults = @()
 # Loop through each entry in the IP list
 foreach ($entry in $ipList) {
     $destinationIP = $entry.IP
-    $sourceIP = (Test-Connection -ComputerName $destinationIP -Count 1 -Quiet) # Pinging the IP address
-    if ($sourceIP) {
-        $pingResult = "Success"
-    } else {
-        $pingResult = "Failure"
-    }
+    $pings = Test-Connection -ComputerName $destinationIP -Count 4
 
-    # Append the results to the array
-    $pingResults += [PSCustomObject]@{
-        SourceIP = $env:COMPUTERNAME
-        DestinationIP = $destinationIP
-        PingResult = $pingResult
+    # Collect results for each ping
+    foreach ($ping in $pings) {
+        $pingResults += [PSCustomObject]@{
+            SourceIP = $env:COMPUTERNAME
+            DestinationIP = $destinationIP
+            PingResult = if ($ping.StatusCode -eq 0) { "Success" } else { "Failure" }
+            ResponseTime = $ping.ResponseTime
+            VMName = $entry.VMName
+            Cluster = $entry.Cluster
+        }
     }
 }
 

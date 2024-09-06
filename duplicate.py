@@ -1,9 +1,8 @@
-from dcim.models import Device
 from ipam.models import IPAddress
 from extras.reports import Report
 
 class DuplicateIPReport(Report):
-    description = "Report showing duplicate IP addresses"
+    description = "Report showing only duplicate IP addresses"
 
     def test_duplicate_ips(self):
         # Dictionary to store IPs and their occurrences
@@ -20,13 +19,11 @@ class DuplicateIPReport(Report):
             else:
                 ip_dict[ip_address] = [ip]
 
-        # Identify duplicates and add to report
+        # Identify duplicates and log only duplicate IPs
         for ip, occurrences in ip_dict.items():
             if len(occurrences) > 1:
+                # Log only the duplicate IPs
                 self.log_failure(
                     occurrences,
                     f"Duplicate IP address found: {ip} - assigned to {len(occurrences)} objects."
                 )
-            else:
-                self.log_success(occurrences[0], f"IP address {ip} is unique.")
-
